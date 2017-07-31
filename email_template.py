@@ -1,6 +1,5 @@
 
-
-def make_email(listings):
+def build_email(listings):
     data_html = ''
     for listing in listings:
         data_html += '<tr mc:repeatable> <td valign="top" class="dataTableContent" mc:edit="data_table_content00"> ' \

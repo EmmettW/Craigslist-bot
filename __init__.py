@@ -2,16 +2,17 @@ import requests
 import copy
 import smtplib
 import email_template
+import hashlib
 from apscheduler.schedulers.blocking import BlockingScheduler
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 # TODO - DOESNT CHECK ALL RESULTS ON CL, ONLY FIRST 100
-# TODO - NEED TO KEEP TRACK OF WHATS BEEN SENT ALREADY!!!
+# TODO - ADD PICTURE IN EMAIL
 
 
 def open_page(url):
-    html = requests.get(url).text
+    html = requests.get(url, verify=False).text
     # filter / split up result string into HTML Segments
     result_array = html[html.find('<ul class="rows">'):].split('<li class="result-row"')
     clean_listings = []
@@ -54,8 +55,8 @@ def search_listings(listings, max_price):
         bad_words = ['want', 'buy', 'looking', 'cd', 'video', 'theater', '7', '7.1', '5.1-channel', '5.1' 'digital',
                      'surround', 'recorder', 'console', 'record', 'boom', 'disc', 'dvd', 'repair', 'parts', 'mp3', 'car']
 
-        good_words = ['pioneer', 'sansui', 'onkyo', 'fisher', 'marantz', 'harman', 'klipsch', 'bose', 'sony',
-                      'sherwood', 'bang', 'olufsen', 'altec', 'jbl', 'mcintosh', 'zenith', 'wharfedale',
+        good_words = ['pioneer', 'sansui', 'onkyo', 'fisher', 'marantz', 'realistic', 'harman', 'klipsch', 'bose', 'sony',
+                      'sherwood', 'bang', 'kenwood', 'olufsen', 'altec', 'jbl', 'mcintosh', 'zenith', 'wharfedale',
                       'rotel', 'boston acoustics', 'teac', 'luxman', 'project one']
 
         # Choosing to eliminate those BS results with a price of $1
@@ -70,10 +71,13 @@ def search_listings(listings, max_price):
             # Order:
             # 1) check for hit
             # 2) Check for false positive
-            # ELSE skip
+
+            # print('found ' + listing[0] + ' $' + listing[1])
             if any(word in listing_lowercase[0] for word in good_words):  # hit
+                #print('found ' + listing_lowercase[0] + ' $' + listing_lowercase[1])
+                # FIRST FILTER WORKS. MUST BE FAILING IN SECOND FILTER
                 if not any(word in listing_lowercase[0] for word in bad_words):  # eliminate false positives
-                    print('found ' + listing[0] + ' $' + listing[1])
+                    print('found ' + listing_lowercase[0] + ' $' + listing_lowercase[1])
                     good_listings.append(listing)  # add listing to master list
     # returns array of checked valid listings
     return good_listings
@@ -113,17 +117,33 @@ def send_emails(listings):
     # Terminate the SMTP session and close the connection
     s.quit()
 
+def check_if_sent(results):
+    # First, check if the listings have been sent or not and filter them.
+    old_hashes = []
+    new_listings = []
+
+    old_lines = open('sent_listings.txt', 'r')
+    for line in old_lines:
+        old_hashes.append(line.strip('\n'))  # create list to search
+
+    for listing in results:
+        # listing_hash = hashlib.md5(listing[2]).hexdigest()  # hashes link to the CL listing ADD THIS .encode('utf-8')
+        if not hashlib.md5(repr(listing)).hexdigest() in old_hashes:
+            new_listings.append(listing)
+
+    for listing in new_listings:
+        print 'new listings! ' + 'found ' + listing[0] + ' $' + listing[1]
+    return new_listings
+
 
 def mark_sent(listings):
-    # Append to the listings to a text file containing other previously sent lisitings.
-    # TODO edit send_emails to search the text file for previous lisitngs that have been sent.
-    # may want to has the listing Title / cost name value pair and store the hash in the text file?
-    # else just do plain text with title & price
-    print('marked')
-    with open('checked_listings.txt', 'w') as text_file:
+    # Append to the listings to a text file containing other previously sent listings.
+    with open('sent_listings.txt', 'a') as text_file:
         for listing in listings:
-            text_file.write(listing[2])  # writes the link to the text file
-
+            # text_file.write(listing[2] + '\n')  # plain text of the link
+            text_file.write(hashlib.md5(repr(listing)).hexdigest() + '\n')  # writes hash of listing to text file
+        # NOW all of the listings that have been sent are written to the file as an md5 hash
+    print('marked')
 
 def main():
     MAX_PRICE = 120
@@ -139,6 +159,10 @@ def main():
     # \/ For testing \/
     listings = open_page(URL_TO_SEARCH)  # step 1
     results = search_listings(listings, MAX_PRICE)  # step 2
-    # send_emails(results)  # literally sends an email step 3
-    mark_sent(results)  # step 4
+    print'---------------------------------------------------------------'
+    new_listings = check_if_sent(results)
+    # send_emails(new_listings)  # literally sends an email step 3
+    print 'SENDING EMAIL (not really)'
+    mark_sent(new_listings)  # step 4
+
 main()

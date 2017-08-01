@@ -3,16 +3,33 @@ import copy
 import smtplib
 import email_template
 import hashlib
+import image_scraper
 from apscheduler.schedulers.blocking import BlockingScheduler
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-# TODO - DOESNT CHECK ALL RESULTS ON CL, ONLY FIRST 100
 # TODO - ADD PICTURE IN EMAIL
 
 
+def get_all_listings(url, num_pages):
+    listings = []
+    url_argv = 0  # listing number displayed. Increments by 120 on CL
+    for x in range(0, num_pages):
+        # Gather listings for how many pages specified.
+        tmp_url = url
+        if not url_argv == 0:
+            tmp_url += repr(url_argv)
+        listings.extend(open_page(tmp_url))
+        url_argv += 120
+    return listings
+
+def image_grabber(url):
+    #  image_scraper
+    print('grabbing images')
+
+
 def open_page(url):
-    html = requests.get(url, verify=False).text
+    html = requests.get(url).text
     # filter / split up result string into HTML Segments
     result_array = html[html.find('<ul class="rows">'):].split('<li class="result-row"')
     clean_listings = []
@@ -52,12 +69,14 @@ def search_listings(listings, max_price):
         listing_lowercase = copy.copy(listing)  # We want to preserve case of original listing
         listing_lowercase[0] = listing_lowercase[0].lower()  # shift listing to lowercase for searching
 
-        bad_words = ['want', 'buy', 'looking', 'cd', 'video', 'theater', '7', '7.1', '5.1-channel', '5.1' 'digital',
-                     'surround', 'recorder', 'console', 'record', 'boom', 'disc', 'dvd', 'repair', 'parts', 'mp3', 'car']
+        bad_words = ['want', 'buy', 'looking', 'cd', 'video', 'theater', '7.1', '5.1-channel', '5.1' 'digital', 'car',
+                     'surround', 'recorder', 'console', 'record', 'boom', 'disc', 'dvd', 'repair', 'parts', 'mp3',
+                     'headphone', 'iso', '6.1', 'cassette', 'vcr', 'new', 'manual', 'bookshelf', 'av', 'din', 'remote',
+                     'hdtv', 'a/v']
 
-        good_words = ['pioneer', 'sansui', 'onkyo', 'fisher', 'marantz', 'realistic', 'harman', 'klipsch', 'bose', 'sony',
+        good_words = ['pioneer', 'sansui', 'onkyo', 'fisher', 'marantz', 'realistic', 'harman', 'klipsch', 'bose',
                       'sherwood', 'bang', 'kenwood', 'olufsen', 'altec', 'jbl', 'mcintosh', 'zenith', 'wharfedale',
-                      'rotel', 'boston acoustics', 'teac', 'luxman', 'project one']
+                      'rotel', 'boston acoustics', 'teac', 'luxman', 'project one', 'jvc', 'sony']
 
         # Choosing to eliminate those BS results with a price of $1
         # Results to be searched must be under set max price
@@ -72,15 +91,11 @@ def search_listings(listings, max_price):
             # 1) check for hit
             # 2) Check for false positive
 
-            # print('found ' + listing[0] + ' $' + listing[1])
             if any(word in listing_lowercase[0] for word in good_words):  # hit
-                #print('found ' + listing_lowercase[0] + ' $' + listing_lowercase[1])
-                # FIRST FILTER WORKS. MUST BE FAILING IN SECOND FILTER
                 if not any(word in listing_lowercase[0] for word in bad_words):  # eliminate false positives
-                    print('found ' + listing_lowercase[0] + ' $' + listing_lowercase[1])
                     good_listings.append(listing)  # add listing to master list
-    # returns array of checked valid listings
-    return good_listings
+                    # print(listing[0] + '  $' + listing[1])
+    return good_listings  # returns array of checked valid listings
 
 
 def do_job(url_to_search, max_price):
@@ -97,7 +112,7 @@ def send_emails(listings):
     msg = MIMEMultipart()  # create a message
 
     # add in the actual person name to the message template
-    message = email_template.make_email(listings)
+    message = email_template.build_email(listings)
 
     # Prints out the message body for our sake
     # print(message)
@@ -117,22 +132,19 @@ def send_emails(listings):
     # Terminate the SMTP session and close the connection
     s.quit()
 
+
 def check_if_sent(results):
     # First, check if the listings have been sent or not and filter them.
     old_hashes = []
     new_listings = []
-
     old_lines = open('sent_listings.txt', 'r')
+
     for line in old_lines:
         old_hashes.append(line.strip('\n'))  # create list to search
-
     for listing in results:
-        # listing_hash = hashlib.md5(listing[2]).hexdigest()  # hashes link to the CL listing ADD THIS .encode('utf-8')
-        if not hashlib.md5(repr(listing)).hexdigest() in old_hashes:
+        if not hashlib.md5(repr(listing).encode('utf-8')).hexdigest() in old_hashes:
+            print('Found!! ' + listing[0] + ' $' + listing[1])
             new_listings.append(listing)
-
-    for listing in new_listings:
-        print 'new listings! ' + 'found ' + listing[0] + ' $' + listing[1]
     return new_listings
 
 
@@ -140,29 +152,29 @@ def mark_sent(listings):
     # Append to the listings to a text file containing other previously sent listings.
     with open('sent_listings.txt', 'a') as text_file:
         for listing in listings:
-            # text_file.write(listing[2] + '\n')  # plain text of the link
-            text_file.write(hashlib.md5(repr(listing)).hexdigest() + '\n')  # writes hash of listing to text file
+            text_file.write(hashlib.md5(repr(listing).encode('utf-8')).hexdigest() + '\n')  # writes hash of listing to text file
         # NOW all of the listings that have been sent are written to the file as an md5 hash
     print('marked')
 
+
 def main():
-    MAX_PRICE = 120
+    MAX_PRICE = 100
     URL_TO_SEARCH = 'https://milwaukee.craigslist.org/search/sss?' \
                     'query=stero+%7C+stereo+%7C+reciever+%7C+receiver' \
-                    '&sort=rel&min_price=2&max_price=' + repr(MAX_PRICE)
+                    '&sort=rel&min_price=2&max_price=' + repr(MAX_PRICE) + '&s='
 
     print('Starting bot...')
     scheduler = BlockingScheduler()
     # scheduler.add_job(do_job(URL_TO_SEARCH, MAX_PRICE), 'interval', hours=1)
     # scheduler.start() # run. Hangs up the program while running
 
-    # \/ For testing \/
-    listings = open_page(URL_TO_SEARCH)  # step 1
+    #    \/ For testing \/
+    listings = get_all_listings(URL_TO_SEARCH, 3) # step 1
     results = search_listings(listings, MAX_PRICE)  # step 2
-    print'---------------------------------------------------------------'
+    print('---------------------------------------------------------------')
     new_listings = check_if_sent(results)
-    # send_emails(new_listings)  # literally sends an email step 3
-    print 'SENDING EMAIL (not really)'
+    send_emails(new_listings)  # literally sends an email step 3
+    print('SENDING EMAIL')
     mark_sent(new_listings)  # step 4
 
 main()

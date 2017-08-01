@@ -23,13 +23,9 @@ def get_all_listings(url, num_pages):
         url_argv += 120
     return listings
 
-def image_grabber(url):
-    #  image_scraper
-    print('grabbing images')
-
 
 def open_page(url):
-    html = requests.get(url).text
+    html = requests.get(url).text  # verify=False (for testing w/ connection issues)
     # filter / split up result string into HTML Segments
     result_array = html[html.find('<ul class="rows">'):].split('<li class="result-row"')
     clean_listings = []
@@ -72,11 +68,12 @@ def search_listings(listings, max_price):
         bad_words = ['want', 'buy', 'looking', 'cd', 'video', 'theater', '7.1', '5.1-channel', '5.1' 'digital', 'car',
                      'surround', 'recorder', 'console', 'record', 'boom', 'disc', 'dvd', 'repair', 'parts', 'mp3',
                      'headphone', 'iso', '6.1', 'cassette', 'vcr', 'new', 'manual', 'bookshelf', 'av', 'din', 'remote',
-                     'hdtv', 'a/v']
+                     'hdtv', 'a/v', 'track', 'tape', 'guitar', 'sub', 'subs', 'auto']
 
         good_words = ['pioneer', 'sansui', 'onkyo', 'fisher', 'marantz', 'realistic', 'harman', 'klipsch', 'bose',
                       'sherwood', 'bang', 'kenwood', 'olufsen', 'altec', 'jbl', 'mcintosh', 'zenith', 'wharfedale',
-                      'rotel', 'boston acoustics', 'teac', 'luxman', 'project one', 'jvc', 'sony']
+                      'rotel', 'boston acoustics', 'teac', 'luxman', 'project one', 'jvc', 'sony', 'phase linear',
+                     'technics']
 
         # Choosing to eliminate those BS results with a price of $1
         # Results to be searched must be under set max price
@@ -90,47 +87,11 @@ def search_listings(listings, max_price):
             # Order:
             # 1) check for hit
             # 2) Check for false positive
-
             if any(word in listing_lowercase[0] for word in good_words):  # hit
                 if not any(word in listing_lowercase[0] for word in bad_words):  # eliminate false positives
                     good_listings.append(listing)  # add listing to master list
                     # print(listing[0] + '  $' + listing[1])
     return good_listings  # returns array of checked valid listings
-
-
-def do_job(url_to_search, max_price):
-    print('I will print this every hour.')
-    listings = open_page(url_to_search)
-    search_listings(listings, max_price)
-
-
-def send_emails(listings):
-    s = smtplib.SMTP(host='smtp.office365.com', port=587)
-    s.starttls()
-    s.login('wesolow7@uwm.edu', '')
-
-    msg = MIMEMultipart()  # create a message
-
-    # add in the actual person name to the message template
-    message = email_template.build_email(listings)
-
-    # Prints out the message body for our sake
-    # print(message)
-
-    # setup the parameters of the message
-    msg['From'] = 'wesolow7@uwm.edu'
-    msg['To'] = 'mmettej@gmail.com'
-    msg['Subject'] = "New Vintage Audio Listings on Craigslist"
-
-    # add in the message body
-    msg.attach(MIMEText(message, 'html'))
-
-    # send the message via the server set up earlier.
-    s.send_message(msg)
-    del msg
-
-    # Terminate the SMTP session and close the connection
-    s.quit()
 
 
 def check_if_sent(results):
@@ -148,33 +109,75 @@ def check_if_sent(results):
     return new_listings
 
 
+def send_email(listings):
+    s = smtplib.SMTP(host='smtp.office365.com', port=587)
+    s.starttls()
+    s.login('wesolow7@uwm.edu', '')
+
+    msg = MIMEMultipart()  # create a message
+
+    # add in the actual person name to the message template
+    message = email_template.build_email(listings)
+
+    # Prints out the message body for our sake
+    # print(message)
+    # setup the parameters of the message
+    msg['From'] = 'wesolow7@uwm.edu'
+    msg['To'] = 'mmettej@gmail.com'
+    msg['Subject'] = "New Vintage Audio Listings on Craigslist"
+
+    # add in the message body
+    msg.attach(MIMEText(message, 'html'))
+    # send the message via the server set up earlier.
+    s.send_message(msg)
+    del msg
+    # Terminate the SMTP session and close the connection
+    s.quit()
+
+
 def mark_sent(listings):
     # Append to the listings to a text file containing other previously sent listings.
     with open('sent_listings.txt', 'a') as text_file:
         for listing in listings:
-            text_file.write(hashlib.md5(repr(listing).encode('utf-8')).hexdigest() + '\n')  # writes hash of listing to text file
+            # writes hash of listing to text file
+            text_file.write(hashlib.md5(repr(listing).encode('utf-8')).hexdigest() + '\n')
         # NOW all of the listings that have been sent are written to the file as an md5 hash
     print('marked')
 
 
+def create_job(url_to_search, max_price):
+    print('I will print this every hour.')
+    listings = open_page(url_to_search)
+    search_listings(listings, max_price)
+
+
+def scrape_thumbnails(url):
+    # Not working. image_scraper
+    print('grabbing images')
+    # TODO - change the path
+    print(
+    image_scraper.scrape_images(url, no_to_download=20, download_path='C:\IntellJ\dl4j-examples', dump_urls=True))
+
+
 def main():
+    scheduler = BlockingScheduler()
     MAX_PRICE = 100
     URL_TO_SEARCH = 'https://milwaukee.craigslist.org/search/sss?' \
-                    'query=stero+%7C+stereo+%7C+reciever+%7C+receiver' \
-                    '&sort=rel&min_price=2&max_price=' + repr(MAX_PRICE) + '&s='
-
+                    'query=stero+%7C+stereo+%7C+reciever+%7C+receiver+%7C+amp+%7C+hifi' \
+                    '&sort=date&min_price=2&max_price=' + repr(MAX_PRICE) + '&s='
     print('Starting bot...')
-    scheduler = BlockingScheduler()
-    # scheduler.add_job(do_job(URL_TO_SEARCH, MAX_PRICE), 'interval', hours=1)
+
+    # scheduler.add_job(create_job(URL_TO_SEARCH, MAX_PRICE), 'interval', hours=1)
     # scheduler.start() # run. Hangs up the program while running
 
     #    \/ For testing \/
-    listings = get_all_listings(URL_TO_SEARCH, 3) # step 1
+    listings = get_all_listings(URL_TO_SEARCH, 3)  # step 1
     results = search_listings(listings, MAX_PRICE)  # step 2
     print('---------------------------------------------------------------')
     new_listings = check_if_sent(results)
-    send_emails(new_listings)  # literally sends an email step 3
+    send_email(new_listings)  # literally sends an email step 3
     print('SENDING EMAIL')
     mark_sent(new_listings)  # step 4
+    #scrape_thumbnails('https://www.google.com')
 
 main()

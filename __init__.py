@@ -110,29 +110,33 @@ def check_if_sent(results):
 
 
 def send_email(listings):
-    s = smtplib.SMTP(host='smtp.office365.com', port=587)
-    s.starttls()
-    s.login('wesolow7@uwm.edu', '')
+    if listings:
+        s = smtplib.SMTP(host='smtp.office365.com', port=587)
+        s.starttls()
+        s.login('wesolow7@uwm.edu', '')
 
-    msg = MIMEMultipart()  # create a message
+        msg = MIMEMultipart()  # create a message
 
-    # add in the actual person name to the message template
-    message = email_template.build_email(listings)
+        # add in the actual person name to the message template
+        message = email_template.build_email(listings)
 
-    # Prints out the message body for our sake
-    # print(message)
-    # setup the parameters of the message
-    msg['From'] = 'wesolow7@uwm.edu'
-    msg['To'] = 'mmettej@gmail.com'
-    msg['Subject'] = "New Vintage Audio Listings on Craigslist"
+        # Prints out the message body for our sake
+        # print(message)
+        # setup the parameters of the message
+        msg['From'] = 'wesolow7@uwm.edu'
+        msg['To'] = 'mmettej@gmail.com'
+        msg['Subject'] = "New Vintage Audio Listings on Craigslist"
 
-    # add in the message body
-    msg.attach(MIMEText(message, 'html'))
-    # send the message via the server set up earlier.
-    s.send_message(msg)
-    del msg
-    # Terminate the SMTP session and close the connection
-    s.quit()
+        # add in the message body
+        msg.attach(MIMEText(message, 'html'))
+        # send the message via the server set up earlier.
+        s.send_message(msg)
+        del msg
+        # Terminate the SMTP session and close the connection
+        s.quit()
+        print('New listings have been sent.')
+    else:
+        print('No email to send')
 
 
 def mark_sent(listings):

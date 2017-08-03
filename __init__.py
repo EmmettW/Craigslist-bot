@@ -109,11 +109,37 @@ def check_if_sent(results):
     return new_listings
 
 
-def send_email(listings):
+def authenticate():
+    # ONLY asks for pass. I don't feel like typing the email address in every time.
+    # I also don't feel comfortable keeping my pw in plain text on my disk
+    # AlSO don't feel like implementing AES or RSA encryption just to do the password for now.
+    logged_in = False
+    login_data = []
+
+    with open('user_info.txt', 'r') as text_file: # There is a text file containing hash to check
+        e_address = text_file.readline()
+        valid_hash = text_file.readline()
+
+    while not logged_in:
+        pw = raw_input('Enter password for email server : ')
+        hashed_pw = hashlib.sha256(pw.encode('utf-8')).hexdigest()
+        if hashed_pw == valid_hash:
+            print(e_address + "Successfully logged in.")
+            logged_in = not logged_in # Now we are successfully logged in.
+            login_data.append(e_address)
+            login_data.append(pw)
+        else:
+            print ('Login failure please try again.\n')
+    return login_data
+
+
+def send_email(listings, login_data):
     if listings:
+        address = login_data[0]
+        pw = login_data[1]
         s = smtplib.SMTP(host='smtp.office365.com', port=587)
         s.starttls()
-        s.login('wesolow7@uwm.edu', '')
+        s.login(address, pw)
 
         msg = MIMEMultipart()  # create a message
 
@@ -123,7 +149,7 @@ def send_email(listings):
         # Prints out the message body for our sake
         # print(message)
         # setup the parameters of the message
-        msg['From'] = 'wesolow7@uwm.edu'
+        msg['From'] = address
         msg['To'] = 'mmettej@gmail.com'
         msg['Subject'] = "New Vintage Audio Listings on Craigslist"
 

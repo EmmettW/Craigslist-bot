@@ -8,8 +8,8 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-# TODO - ADD PICTURE IN EMAIL
-
+# TODO - Implement Stem / TOR Controller to create socket to a proxy. 
+# Will then need to switch proxies every hour or so. Kinda sucks but needs to happen.
 
 def get_all_listings(url, num_pages):
     listings = []

@@ -172,7 +172,7 @@ def mark_sent(listings):
             # writes hash of listing to text file
             text_file.write(hashlib.md5(repr(listing).encode('utf-8')).hexdigest() + '\n')
         # NOW all of the listings that have been sent are written to the file as an md5 hash
-    print('marked')
+    print('Done.')
 
 
 def create_job(url_to_search, max_price):
@@ -191,7 +191,7 @@ def scrape_thumbnails(url):
 
 def main():
     scheduler = BlockingScheduler()
-    MAX_PRICE = 100
+    MAX_PRICE = 150
     URL_TO_SEARCH = 'https://milwaukee.craigslist.org/search/sss?' \
                     'query=stero+%7C+stereo+%7C+reciever+%7C+receiver+%7C+amp+%7C+hifi' \
                     '&sort=date&min_price=2&max_price=' + repr(MAX_PRICE) + '&s='
@@ -205,7 +205,7 @@ def main():
     results = search_listings(listings, MAX_PRICE)  # step 2
     print('---------------------------------------------------------------')
     new_listings = check_if_sent(results)
-    send_email(new_listings)  # literally sends an email step 3
+    send_email(new_listings, authenticate())  # literally sends an email step 3
     print('SENDING EMAIL')
     mark_sent(new_listings)  # step 4
     #scrape_thumbnails('https://www.google.com')

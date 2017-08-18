@@ -66,16 +66,16 @@ def search_listings(listings, max_price):
         listing_lowercase[0] = listing_lowercase[0].lower()  # shift listing to lowercase for searching
 
         bad_words = ['want', 'buy', 'looking', 'cd', 'video', 'theater', '7.1', '5.1-channel', '5.1', 'digital', 'car',
-                     'surround', 'recorder', 'console', 'record', 'boom', 'disc', 'dvd', 'repair', 'parts', 'mp3',
-                     'headphone', 'iso', '6.1', 'cassette', 'vcr', 'new', 'manual', 'bookshelf', 'av', 'din', 'remote',
-                     'hdtv', 'a/v', 'tv', 'track', 'tape', 'guitar', 'sub', 'subs', 'auto','dock', 'iphone', 'box',
-                     'graphic', 'denon']
+                     'surround', 'recorder', 'console', 'boom', 'disc', 'dvd', 'repair', 'parts', 'mp3',
+                     'headphone', 'iso', '6.1', 'cassette', 'vcr', 'new', 'manual', 'av', 'din', 'remote',
+                     'hdtv', 'a/v', 'tv', 'track', 'guitar', 'sub', 'subs', 'bar', 'auto','dock', 'iphone',
+                     'box', 'graphic', 'denon', '&amp']
 
         good_words = ['pioneer', 'sansui', 'onkyo', 'fisher', 'marantz', 'realistic', 'harman', 'klipsch', 'bose',
                       'sherwood', 'bang', 'kenwood', 'olufsen', 'altec', 'jbl', 'mcintosh', 'zenith', 'wharfedale',
                       'rotel', 'boston acoustics', 'teac', 'luxman', 'project one', 'jvc', 'sony', 'phase linear',
-                     'technics', 'hifi', 'hi-fi', 'lafayette', 'hk', 'panasonic', 'klh', 'ev', 'electrovoice',
-                      'electro-voice', 'bowers']
+                     'technics', 'hifi', 'hi-fi', 'lafayette', 'hk', 'vintage', 'panasonic', 'klh', 'ev',
+                      'electrovoice', 'electro-voice', 'bowers', 'reel', 'akai']
 
         # Choosing to eliminate those BS results with a price of $1
         # Results to be searched must be under set max price
